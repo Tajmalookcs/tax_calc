@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Based Tax Calculator – FBR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#07101e;--surface:#0d1726;--card:#111f33;--card2:#162540;
+      --border:#1b2d47;--accent:#00e5a0;--blue:#0ea5ff;--purple:#a78bfa;
+      --danger:#ff5e6b;--warn:#f59e0b;--text:#e8f0fc;--muted:#4e6a8a;--muted2:#7a9bbf;
+    }
+    html,body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;font-size:15px;line-height:1.6;min-height:100%}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:linear-gradient(rgba(0,229,160,.022) 1px,transparent 1px),
+                       linear-gradient(90deg,rgba(0,229,160,.022) 1px,transparent 1px);
+      background-size:46px 46px}
+    .orb{position:fixed;border-radius:50%;filter:blur(110px);pointer-events:none;z-index:0}
+    .o1{width:600px;height:600px;background:rgba(0,229,160,.11);top:-200px;left:-200px}
+    .o2{width:500px;height:500px;background:rgba(14,165,255,.09);bottom:-160px;right:-180px}
+    .o3{width:350px;height:350px;background:rgba(167,139,250,.07);top:40%;left:50%;transform:translateX(-50%)}
+    .wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
+
+    /* ── TOPBAR ── */
+    .topbar{width:100%;max-width:920px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:32px;padding:11px 20px;background:rgba(17,31,51,.78);border:1px solid var(--border);border-radius:14px;backdrop-filter:blur(14px)}
+    .tb-brand{display:flex;align-items:center;gap:10px}
+    .tb-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--blue));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#000;flex-shrink:0}
+    .tb-name{font-size:13px;font-weight:700;color:var(--text)}.tb-name span{color:var(--accent)}
+    .tb-dev{font-size:11px;color:var(--muted2)}.tb-dev strong{color:var(--accent);font-weight:700}
+
+    /* ── HEADER ── */
+    header{text-align:center;margin-bottom:28px;width:100%;max-width:920px}
+    .ai-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(0,229,160,.1),rgba(14,165,255,.1));border:1px solid rgba(0,229,160,.28);color:var(--accent);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 16px;border-radius:30px;margin-bottom:16px}
+    .ai-badge .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+    h1{font-size:clamp(22px,5vw,48px);font-weight:800;line-height:1.15;margin-bottom:8px;background:linear-gradient(135deg,#e8f0fc 15%,var(--accent) 55%,var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .sub{color:var(--muted2);font-size:clamp(12px,2vw,14px);max-width:520px;margin:0 auto}
+
+    /* ── MODE SWITCHER ── */
+    .mode-switch{width:100%;max-width:920px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;padding:5px}
+    .mode-btn{padding:14px 18px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--muted2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .mode-btn.active{background:var(--card2);border-color:var(--border);color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,.3)}
+    .mode-btn.active .mi{color:var(--accent)}
+    .mode-btn:hover:not(.active){color:var(--text);background:rgba(255,255,255,.03)}
+    .mi{font-size:16px}
+
+    /* ── MAIN CARD ── */
+    .card{width:100%;max-width:920px;background:var(--card);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:0 12px 60px rgba(0,0,0,.6),0 0 0 1px rgba(0,229,160,.04)}
+
+    /* ── INPUT SECTION ── */
+    .inp-sec{padding:clamp(20px,5vw,36px);border-bottom:1px solid var(--border)}
+
+    .mls{display:flex;align-items:center;gap:12px;margin-bottom:22px;padding:12px 16px;border-radius:12px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.12)}
+    .mls-ico{font-size:20px}
+    .mls-t{font-size:13px;font-weight:600;color:var(--text)}.mls-t span{color:var(--accent)}
+    .mls-s{font-size:11px;color:var(--muted2);margin-top:2px}
+
+    /* NEW YEAR BADGE */
+    .new-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(0,229,160,.15);border:1px solid rgba(0,229,160,.35);color:var(--accent);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:10px;margin-left:7px;vertical-align:middle}
+
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+    @media(max-width:520px){.row2{grid-template-columns:1fr}}
+
+    .flbl{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+
+    .sel-wrap{position:relative}
+    .sel-wrap::after{content:'▾';position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--accent);font-size:12px;pointer-events:none}
+    select{width:100%;padding:13px 34px 13px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+    select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,160,.1)}
+    select option{background:var(--card2)}
+
+    .tgl-row{display:flex;gap:8px;flex-wrap:wrap}
+    .tgl{flex:1;min-width:120px;padding:11px 12px;background:transparent;border:1.5px solid var(--border);color:var(--muted2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;border-radius:11px;cursor:pointer;transition:all .2s;text-align:center}
+    .tgl.on{background:rgba(0,229,160,.1);border-color:var(--accent);color:var(--accent)}
+    .tgl:hover:not(.on){border-color:var(--muted2);color:var(--text)}
+
+    .inp-row{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin-top:4px}
+    .inp-wrap{flex:1;min-width:160px;position:relative}
+    .pfx{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);pointer-events:none;user-select:none}
+    input[type=number]{width:100%;padding:15px 14px 15px 50px;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:clamp(15px,3vw,18px);font-weight:600;outline:none;transition:border-color .2s,box-shadow .2s;-moz-appearance:textfield}
+    input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+    input[type=number]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,160,.1)}
+    input[type=number]::placeholder{color:var(--muted);opacity:.45;font-size:14px}
+
+    .btn{padding:15px clamp(18px,4vw,36px);background:linear-gradient(135deg,var(--accent),var(--blue));border:none;border-radius:11px;color:#000;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s,box-shadow .2s;box-shadow:0 4px 24px rgba(0,229,160,.25);width:100%}
+    @media(min-width:460px){.btn{width:auto}}
+    .btn:hover{opacity:.87;transform:translateY(-1px);box-shadow:0 8px 30px rgba(0,229,160,.35)}
+    .btn:active{transform:translateY(0)}
+    .inp-hint{font-size:11px;color:var(--muted);margin-top:10px;opacity:.7}
+
+    /* slab strip */
+    .slab-strip{margin-top:18px;padding:13px 15px;background:rgba(14,165,255,.05);border:1px solid rgba(14,165,255,.14);border-radius:10px}
+    .ss-title{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .ss-pills{display:flex;flex-wrap:wrap;gap:6px}
+    .spill{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 9px;border-radius:20px;background:rgba(14,165,255,.07);border:1px solid rgba(14,165,255,.16);color:var(--muted2);white-space:nowrap}
+    .spill strong{color:var(--blue)}
+
+    /* ── RESULTS ── */
+    .res-sec{max-height:0;overflow:hidden;transition:max-height .65s cubic-bezier(.4,0,.2,1)}
+    .res-sec.on{max-height:2000px}
+    .res-in{padding:clamp(20px,5vw,34px)}
+
+    .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:26px}
+    @media(max-width:460px){.sg{grid-template-columns:1fr}}
+    @media(min-width:461px) and (max-width:640px){.sg{grid-template-columns:1fr 1fr}}
+
+    .sc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:clamp(14px,3vw,20px);position:relative;overflow:hidden;animation:slideUp .45s ease both}
+    .sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .sc.ct::after{background:linear-gradient(90deg,#ff5e6b,#f59e0b)}
+    .sc.ci::after{background:linear-gradient(90deg,var(--accent),var(--blue))}
+    .sc.ch::after{background:linear-gradient(90deg,var(--purple),#60a5fa)}
+    .sc:nth-child(2){animation-delay:.08s}.sc:nth-child(3){animation-delay:.16s}
+    .slbl{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+    .sval{font-family:'JetBrains Mono',monospace;font-size:clamp(13px,2.2vw,20px);font-weight:700;color:var(--text);word-break:break-all}
+    .ssub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+    .rate-sec{margin-bottom:28px}
+    .rate-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+    .rate-lbl{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}
+    .rate-val{font-family:'JetBrains Mono',monospace;font-size:clamp(17px,3vw,22px);font-weight:700;color:var(--accent)}
+    .bar-track{height:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);overflow:hidden}
+    .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--blue));border-radius:10px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+
+    .tbl-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+    .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px;border:1px solid var(--border)}
+    table{width:100%;border-collapse:collapse;min-width:400px}
+    thead th{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);white-space:nowrap}
+    thead th:first-child{text-align:left}thead th:not(:first-child){text-align:right}
+    tbody td{padding:11px 14px;font-size:12px;border-bottom:1px solid rgba(27,45,71,.6);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+    tbody td:first-child{text-align:left;font-family:'Sora',sans-serif;color:var(--muted2);font-size:12px}
+    tbody td:not(:first-child){text-align:right}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr{transition:background .15s}
+    tbody tr:hover td{background:rgba(255,255,255,.02)}
+    .arow td{background:rgba(0,229,160,.06)!important}
+    .arow td:first-child{color:var(--text)!important}
+    .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--border);margin-right:7px;vertical-align:middle}
+    .arow .sdot{background:var(--accent);box-shadow:0 0 7px var(--accent)}
+    .td-rate{color:var(--blue);font-weight:700}
+    .td-tax{color:var(--text);font-weight:700}
+    .mbar-wrap{height:3px;background:var(--border);border-radius:3px;margin-top:5px;min-width:40px}
+    .mbar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--blue));width:0;transition:width 1.2s ease}
+
+    .fbox{margin-top:20px;padding:14px 16px;background:rgba(14,165,255,.05);border:1px solid rgba(14,165,255,.16);border-radius:10px;font-size:12px;color:var(--muted2);line-height:1.9}
+    .fbox strong{color:var(--blue)}
+    .fbox code{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(0,0,0,.35);padding:1px 6px;border-radius:4px;color:var(--accent)}
+
+    .note{margin-top:14px;padding:12px 16px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.14);border-radius:10px;font-size:11px;color:var(--muted2);line-height:1.7}
+    .note strong{color:var(--warn)}
+
+    footer{margin-top:32px;text-align:center;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
+    footer .fd strong{color:var(--accent);font-weight:700}
+
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+    @keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+    .shake{animation:shake .35s ease;border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(255,94,107,.15)!important}
+  </style>
+</head>
+<body>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+
+<div class="wrap">
+
+  <!-- Topbar -->
+  <nav class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">AI</div>
+      <div class="tb-name">FBR <span>Tax</span> Calculator</div>
+    </div>
+    <div class="tb-dev">Developed by &nbsp;<strong>Taj Malook</strong></div>
+  </nav>
+
+  <!-- Header -->
+  <header>
+    <div class="ai-badge"><span class="dot"></span>AI Powered · FBR Compliant · 6 Tax Years</div>
+    <h1>AI Based Tax Calculator<br>for FBR</h1>
+    <p class="sub">Calculate tax from income <em style="-webkit-text-fill-color:var(--muted2)">or</em> reverse-calculate income from tax — powered by official FBR slabs 2020–2026</p>
+  </header>
+
+  <!-- Mode switcher -->
+  <div class="mode-switch">
+    <button class="mode-btn active" id="modeIncome" onclick="setMode('income')">
+      <span class="mi">💰</span><span>Income → Tax</span>
+    </button>
+    <button class="mode-btn" id="modeTax" onclick="setMode('tax')">
+      <span class="mi">🔄</span><span>Tax → Income</span>
+    </button>
+  </div>
+
+  <!-- Main card -->
+  <div class="card">
+    <div class="inp-sec">
+
+      <!-- Mode strip -->
+      <div class="mls" id="mlStrip">
+        <div class="mls-ico" id="mlsIco">💰</div>
+        <div>
+          <div class="mls-t" id="mlsT">Enter your <span>gross income</span> → calculate tax payable</div>
+          <div class="mls-s" id="mlsS">Uses FBR progressive slab: Tax = Fixed + Rate% × Excess above slab threshold</div>
+        </div>
+      </div>
+
+      <!-- Year + Category row -->
+      <div class="row2">
+        <div>
+          <div class="flbl">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Tax Year
+          </div>
+          <div class="sel-wrap">
+            <select id="yearSel" onchange="onYearChange()">
+              <option value="2025-26" selected>2025-26 ✦ Latest</option>
+              <option value="2024-25">2024-25</option>
+              <option value="2023-24">2023-24</option>
+              <option value="2022-23">2022-23</option>
+              <option value="2021-22">2021-22</option>
+              <option value="2020-21">2020-21</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="flbl">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2"/></svg>
+            Taxpayer Type
+          </div>
+          <div class="tgl-row">
+            <button class="tgl on" id="btn-s" onclick="setCategory('salaried')">🏢 Salaried</button>
+            <button class="tgl"    id="btn-n" onclick="setCategory('nonsalaried')">💼 Business</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Amount input -->
+      <div class="flbl" id="inputLabel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Annual Gross Income (PKR)
+      </div>
+      <div class="inp-row">
+        <div class="inp-wrap">
+          <span class="pfx">₨</span>
+          <input type="number" id="mainInp" placeholder="e.g.  1,500,000" min="0"/>
+        </div>
+        <button class="btn" id="calcBtn" onclick="calculate()">Calculate Tax</button>
+      </div>
+      <p class="inp-hint" id="inpHint">💡 Enter your annual gross income to see exactly how much tax you owe under FBR <span id="hintYear">2025-26</span> slabs.</p>
+
+      <!-- Slab reference strip -->
+      <div class="slab-strip">
+        <div class="ss-title" id="ssTitle">FBR 2025-26 Salaried Slabs (Reference)</div>
+        <div class="ss-pills" id="ssPills"></div>
+      </div>
+
+    </div><!-- /inp-sec -->
+
+    <!-- Results -->
+    <div class="res-sec" id="res">
+      <div class="res-in">
+
+        <div class="sg">
+          <div class="sc ci" id="card1">
+            <div class="slbl" id="c1lbl">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+              Gross Income
+            </div>
+            <div class="sval" id="r-v1">—</div>
+            <div class="ssub" id="r-s1">—</div>
+          </div>
+          <div class="sc ct" id="card2">
+            <div class="slbl" id="c2lbl">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ff5e6b" stroke-width="2"><path d="M9 14l6-6M9.5 9a.5.5 0 100-1 .5.5 0 000 1zm5 5a.5.5 0 100-1 .5.5 0 000 1z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Tax Payable
+            </div>
+            <div class="sval" id="r-v2">—</div>
+            <div class="ssub" id="r-s2">—</div>
+          </div>
+          <div class="sc ch">
+            <div class="slbl">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Take-Home
+            </div>
+            <div class="sval" id="r-home">—</div>
+            <div class="ssub" id="r-home-mo">—</div>
+          </div>
+        </div>
+
+        <div class="rate-sec">
+          <div class="rate-hdr">
+            <span class="rate-lbl">Effective Tax Rate</span>
+            <span class="rate-val" id="r-rate">0%</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="rBar"></div></div>
+        </div>
+
+        <div class="tbl-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18"/></svg>
+          Slab-by-Slab Breakdown
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Income Range</th>
+                <th>Rate</th>
+                <th>Income in Slab</th>
+                <th>Tax in Slab</th>
+              </tr>
+            </thead>
+            <tbody id="tBody"></tbody>
+          </table>
+        </div>
+
+        <div class="fbox" id="fBox"></div>
+
+        <div class="note">
+          <strong>Note:</strong> Based on FBR <span id="noteYear">2025-26</span> Finance Act slabs for <span id="noteCat">salaried</span> individuals. Results are estimates — consult a qualified tax advisor for personalised advice.
+        </div>
+
+      </div>
+    </div><!-- /res -->
+  </div><!-- /card -->
+
+  <footer>
+    <div class="fd">Developed by <strong>Taj Malook</strong></div>
+    <div style="opacity:.45">AI Based FBR Tax Calculator · Pakistan · 2020-2026</div>
+  </footer>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   FBR SLAB DATABASE — 6 Tax Years · Salaried & Non-Salaried
+   ───────────────────────────────────────────────────────────────────
+   Formula  : tax    = fix + (income − min) × rate / 100
+   Reverse  : income = min + (tax − fix)    / (rate / 100)
+   "fix"    = accumulated tax at the bottom of this slab
+              = tax[i+1].fix for verification (next slab's fixed amount)
+═══════════════════════════════════════════════════════════════════════ */
+const DB = {
+
+  /* ── 2025-26  Finance Act 2025 (effective 01-Jul-2025) ─────────── */
+  '2025-26': {
+    salaried: [
+      {min:0,       max:600000,   fix:0,      rate:0,  label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,      rate:1,  label:'600,001 – 1,200,000'},
+      {min:1200000, max:2200000,  fix:6000,   rate:11, label:'1,200,001 – 2,200,000'},
+      {min:2200000, max:3200000,  fix:116000, rate:23, label:'2,200,001 – 3,200,000'},
+      {min:3200000, max:4100000,  fix:346000, rate:30, label:'3,200,001 – 4,100,000'},
+      {min:4100000, max:Infinity, fix:616000, rate:35, label:'Above 4,100,000'},
+    ],
+    nonsalaried: [
+      {min:0,       max:600000,   fix:0,       rate:0,  label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,       rate:2,  label:'600,001 – 1,200,000'},
+      {min:1200000, max:2200000,  fix:12000,   rate:22, label:'1,200,001 – 2,200,000'},
+      {min:2200000, max:3200000,  fix:232000,  rate:46, label:'2,200,001 – 3,200,000'},
+      {min:3200000, max:4100000,  fix:692000,  rate:60, label:'3,200,001 – 4,100,000'},
+      {min:4100000, max:Infinity, fix:1232000, rate:70, label:'Above 4,100,000'},
+    ]
+  },
+
+  /* ── 2024-25  Finance Act 2024 ─────────────────────────────────── */
+  '2024-25': {
+    salaried: [
+      {min:0,       max:600000,   fix:0,      rate:0,  label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,      rate:5,  label:'600,001 – 1,200,000'},
+      {min:1200000, max:2200000,  fix:30000,  rate:15, label:'1,200,001 – 2,200,000'},
+      {min:2200000, max:3200000,  fix:180000, rate:25, label:'2,200,001 – 3,200,000'},
+      {min:3200000, max:4100000,  fix:430000, rate:30, label:'3,200,001 – 4,100,000'},
+      {min:4100000, max:Infinity, fix:700000, rate:35, label:'Above 4,100,000'},
+    ],
+    nonsalaried: [
+      {min:0,       max:600000,   fix:0,       rate:0,  label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,       rate:10, label:'600,001 – 1,200,000'},
+      {min:1200000, max:2200000,  fix:60000,   rate:30, label:'1,200,001 – 2,200,000'},
+      {min:2200000, max:3200000,  fix:360000,  rate:50, label:'2,200,001 – 3,200,000'},
+      {min:3200000, max:4100000,  fix:860000,  rate:60, label:'3,200,001 – 4,100,000'},
+      {min:4100000, max:Infinity, fix:1400000, rate:70, label:'Above 4,100,000'},
+    ]
+  },
+
+  /* ── 2023-24  Finance Act 2023 ─────────────────────────────────── */
+  '2023-24': {
+    salaried: [
+      {min:0,       max:600000,   fix:0,       rate:0,    label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,       rate:2.5,  label:'600,001 – 1,200,000'},
+      {min:1200000, max:2400000,  fix:15000,   rate:12.5, label:'1,200,001 – 2,400,000'},
+      {min:2400000, max:3600000,  fix:165000,  rate:22.5, label:'2,400,001 – 3,600,000'},
+      {min:3600000, max:6000000,  fix:435000,  rate:27.5, label:'3,600,001 – 6,000,000'},
+      {min:6000000, max:Infinity, fix:1095000, rate:35,   label:'Above 6,000,000'},
+    ],
+    nonsalaried: [
+      {min:0,       max:600000,   fix:0,       rate:0,  label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,       rate:15, label:'600,001 – 1,200,000'},
+      {min:1200000, max:1600000,  fix:90000,   rate:20, label:'1,200,001 – 1,600,000'},
+      {min:1600000, max:3200000,  fix:170000,  rate:30, label:'1,600,001 – 3,200,000'},
+      {min:3200000, max:5600000,  fix:650000,  rate:40, label:'3,200,001 – 5,600,000'},
+      {min:5600000, max:Infinity, fix:1610000, rate:45, label:'Above 5,600,000'},
+    ]
+  },
+
+  /* ── 2022-23  Finance Act 2022 ─────────────────────────────────── */
+  '2022-23': {
+    salaried: [
+      {min:0,       max:600000,   fix:0,       rate:0,    label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,       rate:2.5,  label:'600,001 – 1,200,000'},
+      {min:1200000, max:2400000,  fix:15000,   rate:12.5, label:'1,200,001 – 2,400,000'},
+      {min:2400000, max:3600000,  fix:165000,  rate:20,   label:'2,400,001 – 3,600,000'},
+      {min:3600000, max:6000000,  fix:405000,  rate:25,   label:'3,600,001 – 6,000,000'},
+      {min:6000000, max:Infinity, fix:1005000, rate:32.5, label:'Above 6,000,000'},
+    ],
+    nonsalaried: [
+      {min:0,       max:600000,   fix:0,       rate:0,  label:'Up to 600,000'},
+      {min:600000,  max:1200000,  fix:0,       rate:15, label:'600,001 – 1,200,000'},
+      {min:1200000, max:1600000,  fix:90000,   rate:20, label:'1,200,001 – 1,600,000'},
+      {min:1600000, max:3200000,  fix:170000,  rate:30, label:'1,600,001 – 3,200,000'},
+      {min:3200000, max:5600000,  fix:650000,  rate:40, label:'3,200,001 – 5,600,000'},
+      {min:5600000, max:Infinity, fix:1610000, rate:45, label:'Above 5,600,000'},
+    ]
+  },
+
+  /* ── 2021-22  Finance Act 2021 ─────────────────────────────────── */
+  '2021-22': {
+    salaried: [
+      {min:0,        max:600000,   fix:0,       rate:0,    label:'Up to 600,000'},
+      {min:600000,   max:1200000,  fix:0,       rate:5,    label:'600,001 – 1,200,000'},
+      {min:1200000,  max:1800000,  fix:30000,   rate:10,   label:'1,200,001 – 1,800,000'},
+      {min:1800000,  max:2500000,  fix:90000,   rate:15,   label:'1,800,001 – 2,500,000'},
+      {min:2500000,  max:3500000,  fix:195000,  rate:17.5, label:'2,500,001 – 3,500,000'},
+      {min:3500000,  max:5000000,  fix:370000,  rate:20,   label:'3,500,001 – 5,000,000'},
+      {min:5000000,  max:8000000,  fix:670000,  rate:22.5, label:'5,000,001 – 8,000,000'},
+      {min:8000000,  max:12000000, fix:1345000, rate:25,   label:'8,000,001 – 12,000,000'},
+      {min:12000000, max:30000000, fix:2345000, rate:27.5, label:'12,000,001 – 30,000,000'},
+      {min:30000000, max:Infinity, fix:7295000, rate:35,   label:'Above 30,000,000'},
+    ],
+    nonsalaried: [
+      {min:0,       max:400000,   fix:0,      rate:0,  label:'Up to 400,000'},
+      {min:400000,  max:600000,   fix:0,      rate:5,  label:'400,001 – 600,000'},
+      {min:600000,  max:1200000,  fix:10000,  rate:10, label:'600,001 – 1,200,000'},
+      {min:1200000, max:2400000,  fix:70000,  rate:15, label:'1,200,001 – 2,400,000'},
+      {min:2400000, max:3000000,  fix:250000, rate:20, label:'2,400,001 – 3,000,000'},
+      {min:3000000, max:4000000,  fix:370000, rate:25, label:'3,000,001 – 4,000,000'},
+      {min:4000000, max:Infinity, fix:620000, rate:29, label:'Above 4,000,000'},
+    ]
+  },
+
+  /* ── 2020-21  Finance Act 2020 ─────────────────────────────────── */
+  '2020-21': {
+    salaried: [
+      {min:0,        max:600000,   fix:0,       rate:0,    label:'Up to 600,000'},
+      {min:600000,   max:1200000,  fix:0,       rate:5,    label:'600,001 – 1,200,000'},
+      {min:1200000,  max:1800000,  fix:30000,   rate:10,   label:'1,200,001 – 1,800,000'},
+      {min:1800000,  max:2500000,  fix:90000,   rate:15,   label:'1,800,001 – 2,500,000'},
+      {min:2500000,  max:3500000,  fix:195000,  rate:17.5, label:'2,500,001 – 3,500,000'},
+      {min:3500000,  max:5000000,  fix:370000,  rate:20,   label:'3,500,001 – 5,000,000'},
+      {min:5000000,  max:8000000,  fix:670000,  rate:22.5, label:'5,000,001 – 8,000,000'},
+      {min:8000000,  max:12000000, fix:1345000, rate:25,   label:'8,000,001 – 12,000,000'},
+      {min:12000000, max:30000000, fix:2345000, rate:27.5, label:'12,000,001 – 30,000,000'},
+      {min:30000000, max:Infinity, fix:7295000, rate:35,   label:'Above 30,000,000'},
+    ],
+    nonsalaried: [
+      {min:0,       max:400000,   fix:0,      rate:0,  label:'Up to 400,000'},
+      {min:400000,  max:600000,   fix:0,      rate:5,  label:'400,001 – 600,000'},
+      {min:600000,  max:1200000,  fix:10000,  rate:10, label:'600,001 – 1,200,000'},
+      {min:1200000, max:2400000,  fix:70000,  rate:15, label:'1,200,001 – 2,400,000'},
+      {min:2400000, max:3000000,  fix:250000, rate:20, label:'2,400,001 – 3,000,000'},
+      {min:3000000, max:4000000,  fix:370000, rate:25, label:'3,000,001 – 4,000,000'},
+      {min:4000000, max:Infinity, fix:620000, rate:29, label:'Above 4,000,000'},
+    ]
+  }
+};
+
+let mode     = 'income';
+let year     = '2025-26';
+let category = 'salaried';
+
+/* ── FORWARD: income → tax ─────────────────────────────────────────── */
+function forwardCalc(income, slabs) {
+  for (let i = 0; i < slabs.length; i++) {
+    const s = slabs[i];
+    if (income <= s.max || s.max === Infinity) {
+      return {tax: Math.round(s.fix + Math.max(0, income - s.min) * s.rate / 100), idx: i};
+    }
+  }
+  const l = slabs[slabs.length-1];
+  return {tax: Math.round(l.fix + (income - l.min) * l.rate / 100), idx: slabs.length-1};
+}
+
+/* ── REVERSE: tax → income ─────────────────────────────────────────── */
+function reverseCalc(taxPaid, slabs) {
+  if (taxPaid <= 0) return {income: 0, idx: 0};
+  for (let i = 0; i < slabs.length; i++) {
+    const s = slabs[i];
+    const maxTax = (i+1 < slabs.length) ? slabs[i+1].fix : Infinity;
+    if (taxPaid <= maxTax || s.max === Infinity) {
+      if (s.rate === 0) return {income: s.min, idx: i};
+      return {income: Math.round(s.min + (taxPaid - s.fix) / (s.rate / 100)), idx: i};
+    }
+  }
+  const l = slabs[slabs.length-1];
+  return {income: Math.round(l.min + (taxPaid - l.fix) / (l.rate / 100)), idx: slabs.length-1};
+}
+
+/* ── Per-slab rows ─────────────────────────────────────────────────── */
+function buildRows(income, slabs, activeIdx) {
+  return slabs.map((s, i) => {
+    if (income <= s.min) return {...s, taxable:0, slabTax:0, active:false};
+    const top     = s.max === Infinity ? income : Math.min(income, s.max);
+    const taxable = top - s.min;
+    const slabTax = s.rate === 0 ? 0 : taxable * s.rate / 100;
+    return {...s, taxable, slabTax, active: i === activeIdx};
+  });
+}
+
+/* ── Formatting ────────────────────────────────────────────────────── */
+function fs(n){ const a=Math.abs(n); if(a>=1e7) return '₨'+(n/1e7).toFixed(2)+' Cr'; if(a>=1e5) return '₨'+(n/1e5).toFixed(2)+' L'; return '₨'+Math.round(n).toLocaleString('en-PK'); }
+function ff(n){ return '₨ '+Math.round(n).toLocaleString('en-PK'); }
+
+/* ── UI for mode ───────────────────────────────────────────────────── */
+function setMode(m) {
+  mode = m;
+  const isI = m === 'income';
+  document.getElementById('modeIncome').classList.toggle('active', isI);
+  document.getElementById('modeTax').classList.toggle('active', !isI);
+  document.getElementById('mlsIco').textContent = isI ? '💰' : '🔄';
+  document.getElementById('mlsT').innerHTML     = isI
+    ? 'Enter your <span>gross income</span> → calculate tax payable'
+    : 'Enter your <span>tax paid</span> → reverse-calculate gross income';
+  document.getElementById('mlsS').textContent   = isI
+    ? 'Uses FBR progressive slab: Tax = Fixed + Rate% × Excess above slab threshold'
+    : 'Algebraic reversal: Income = Slab Min + (Tax − Fixed) ÷ Rate%';
+  document.getElementById('inputLabel').innerHTML = isI
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Annual Gross Income (PKR)`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l6-6M9.5 9a.5.5 0 100-1 .5.5 0 000 1zm5 5a.5.5 0 100-1 .5.5 0 000 1z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Annual Tax Amount Paid (PKR)`;
+  const inp = document.getElementById('mainInp');
+  inp.placeholder = isI ? 'e.g.  1,500,000' : 'e.g.  30,000';
+  inp.value = '';
+  document.getElementById('calcBtn').textContent = isI ? 'Calculate Tax' : 'Calculate Income';
+  document.getElementById('inpHint').innerHTML   = isI
+    ? `💡 Enter your annual gross income to see tax owed under FBR <span id="hintYear">${year}</span> slabs.`
+    : `💡 Enter the annual tax paid to reverse-calculate your gross income under FBR <span id="hintYear">${year}</span> slabs.`;
+  document.getElementById('c1lbl').innerHTML = isI
+    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Gross Income`
+    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ff5e6b" stroke-width="2"><path d="M9 14l6-6M9.5 9a.5.5 0 100-1 .5.5 0 000 1zm5 5a.5.5 0 100-1 .5.5 0 000 1z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Tax Paid`;
+  document.getElementById('c2lbl').innerHTML = isI
+    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ff5e6b" stroke-width="2"><path d="M9 14l6-6M9.5 9a.5.5 0 100-1 .5.5 0 000 1zm5 5a.5.5 0 100-1 .5.5 0 000 1z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Tax Payable`
+    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Gross Income`;
+  document.getElementById('card1').className = 'sc ' + (isI ? 'ci' : 'ct');
+  document.getElementById('card2').className = 'sc ' + (isI ? 'ct' : 'ci');
+  document.getElementById('res').classList.remove('on');
+  document.getElementById('rBar').style.width = '0';
+}
+
+/* ── Year / Category ───────────────────────────────────────────────── */
+function onYearChange() {
+  year = document.getElementById('yearSel').value;
+  renderStrip();
+  const hy = document.getElementById('hintYear');
+  if (hy) hy.textContent = year;
+  const v = parseFloat(document.getElementById('mainInp').value);
+  if (!isNaN(v) && v >= 0) calculate();
+}
+function setCategory(cat) {
+  category = cat;
+  document.getElementById('btn-s').classList.toggle('on', cat==='salaried');
+  document.getElementById('btn-n').classList.toggle('on', cat==='nonsalaried');
+  renderStrip();
+  const v = parseFloat(document.getElementById('mainInp').value);
+  if (!isNaN(v) && v >= 0) calculate();
+}
+
+/* ── Slab strip ────────────────────────────────────────────────────── */
+function renderStrip() {
+  const slabs = DB[year][category];
+  const isNew = year === '2025-26';
+  document.getElementById('ssTitle').innerHTML =
+    `FBR ${year} ${category==='salaried'?'Salaried':'Business'} Slabs (Reference)`
+    + (isNew ? ` <span class="new-badge">✦ Updated</span>` : '');
+  const pills = document.getElementById('ssPills');
+  pills.innerHTML = '';
+  slabs.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'spill';
+    d.innerHTML = `${s.label}: <strong>${s.rate===0?'Nil':s.rate+'%'}</strong>`;
+    pills.appendChild(d);
+  });
+}
+
+/* ── MAIN CALCULATE ────────────────────────────────────────────────── */
+function calculate() {
+  const inp = document.getElementById('mainInp');
+  const raw = parseFloat(inp.value);
+  if (isNaN(raw) || raw < 0) {
+    inp.classList.remove('shake'); void inp.offsetWidth;
+    inp.classList.add('shake'); inp.focus();
+    setTimeout(()=>inp.classList.remove('shake'), 400);
+    return;
+  }
+
+  const val   = Math.round(raw);
+  const slabs = DB[year][category];
+  const isI   = mode === 'income';
+
+  let gross, tax, activeIdx;
+  if (isI) {
+    gross = val;
+    const r = forwardCalc(gross, slabs);
+    tax = r.tax; activeIdx = r.idx;
+  } else {
+    tax = val;
+    const r = reverseCalc(tax, slabs);
+    gross = r.income; activeIdx = r.idx;
+  }
+
+  const takehome = gross - tax;
+  const effRate  = gross > 0 ? (tax / gross) * 100 : 0;
+  const rows     = buildRows(gross, slabs, activeIdx);
+  const aS       = slabs[activeIdx];
+
+  // Cards
+  document.getElementById('r-v1').textContent    = ff(isI ? gross : tax);
+  document.getElementById('r-s1').textContent    = fs((isI ? gross : tax) / 12) + ' / month';
+  document.getElementById('r-v2').textContent    = ff(isI ? tax : gross);
+  document.getElementById('r-s2').textContent    = fs((isI ? tax : gross) / 12) + ' / month';
+  document.getElementById('r-home').textContent  = ff(takehome);
+  document.getElementById('r-home-mo').textContent = fs(takehome / 12) + ' / month';
+  document.getElementById('r-rate').textContent  = effRate.toFixed(2) + '%';
+
+  setTimeout(()=>{ document.getElementById('rBar').style.width = Math.min(effRate/40*100,100)+'%'; }, 80);
+
+  // Table
+  const tbody = document.getElementById('tBody');
+  tbody.innerHTML = '';
+  const totalTax = rows.reduce((a,r)=>a+r.slabTax, 0);
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    if (row.active) tr.className = 'arow';
+    const pct = row.slabTax>0 && totalTax>0 ? Math.min(row.slabTax/totalTax*100, 100) : 0;
+    const rStr = row.rate===0
+      ? '<span style="color:var(--accent)">Nil</span>'
+      : `<span class="td-rate">${row.rate}%</span>`;
+    const tStr = row.slabTax>0
+      ? `<span class="td-tax">${ff(row.slabTax)}</span><div class="mbar-wrap"><div class="mbar" data-pct="${pct.toFixed(1)}" style="width:0"></div></div>`
+      : `<span style="color:var(--muted)">${row.rate===0?'Nil':'—'}</span>`;
+    tr.innerHTML = `<td><span class="sdot"></span>${row.label}</td><td>${rStr}</td><td><span style="color:var(--text)">${row.taxable>0?ff(row.taxable):'—'}</span></td><td>${tStr}</td>`;
+    tbody.appendChild(tr);
+  });
+  setTimeout(()=>{ document.querySelectorAll('.mbar').forEach(b=>b.style.width=b.dataset.pct+'%'); }, 160);
+
+  // Formula
+  const fb = document.getElementById('fBox');
+  if (aS.rate === 0) {
+    fb.innerHTML = `<strong>Formula (${year} · ${aS.label}):</strong> Tax = <code>0</code> — Zero-rate slab. No tax payable.`;
+  } else if (isI) {
+    fb.innerHTML = `<strong>Forward Formula (${aS.label} · ${year}):</strong><br>
+      Tax = <code>₨ ${aS.fix.toLocaleString('en-PK')}</code> + <code>${aS.rate}%</code> × (<code>₨ ${gross.toLocaleString('en-PK')}</code> − <code>₨ ${aS.min.toLocaleString('en-PK')}</code>)
+      = <strong style="color:var(--accent)">${ff(tax)}</strong>`;
+  } else {
+    fb.innerHTML = `<strong>Reverse Formula (${aS.label} · ${year}):</strong><br>
+      Tax = <code>₨ ${aS.fix.toLocaleString('en-PK')}</code> + <code>${aS.rate}%</code> × (Income − <code>₨ ${aS.min.toLocaleString('en-PK')}</code>)<br>
+      ∴ Income = <code>₨ ${aS.min.toLocaleString('en-PK')}</code> + (<code>₨ ${tax.toLocaleString('en-PK')}</code> − <code>₨ ${aS.fix.toLocaleString('en-PK')}</code>) ÷ <code>${aS.rate}%</code>
+      = <strong style="color:var(--accent)">${ff(gross)}</strong>`;
+  }
+
+  document.getElementById('noteYear').textContent = year;
+  document.getElementById('noteCat').textContent  = category==='salaried'?'salaried':'non-salaried / business';
+  document.getElementById('res').classList.add('on');
+}
+
+document.getElementById('mainInp').addEventListener('keydown', e=>{ if(e.key==='Enter') calculate(); });
+
+// Init
+renderStrip();
+</script>
+</body>
+</html>
